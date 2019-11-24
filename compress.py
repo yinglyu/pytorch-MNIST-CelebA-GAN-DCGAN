@@ -149,22 +149,22 @@ train_loader = torch.utils.data.DataLoader(
 
 # network
 G = generator(128)
-small_g = generator(64)
-D = discriminator(128)
+small_G = generator(64)
+# D = discriminator(128)
 G.weight_init(mean=0.0, std=0.02)
 small_G.weight_init(mean=0.0, std=0.02)
-D.weight_init(mean=0.0, std=0.02)
+# D.weight_init(mean=0.0, std=0.02)
 G.cuda()
 small_G.cuda()
-D.cuda()
+# D.cuda()
 
 # Binary Cross Entropy loss
-BCE_loss = nn.BCELoss()
+# BCE_loss = nn.BCELoss()
 L1_loss = nn.L1Loss()
 
 # Adam optimizer
 G_optimizer = optim.Adam(samll_G.parameters(), lr=lr, betas=(0.5, 0.999))
-D_optimizer = optim.Adam(D.parameters(), lr=lr, betas=(0.5, 0.999))
+# D_optimizer = optim.Adam(D.parameters(), lr=lr, betas=(0.5, 0.999))
 
 # results save folder
 if not os.path.isdir('MNIST_DCGAN_results'):
@@ -177,9 +177,9 @@ if not os.path.isdir('MNIST_DCGAN_results/Fixed_results'):
 if os.path.exists("MNIST_DCGAN_results/state.pkl"):
     checkpoint = torch.load("MNIST_DCGAN_results/state.pkl")
     G.load_state_dict(checkpoint['G'])
-    D.load_state_dict(checkpoint['D'])
+#     D.load_state_dict(checkpoint['D'])
     G_optimizer.load_state_dict(checkpoint['G_optimizer'])
-    D_optimizer.load_state_dict(checkpoint['D_optimizer'])
+#     D_optimizer.load_state_dict(checkpoint['D_optimizer'])
     train_hist = checkpoint['train_hist']
     total_ptime =  checkpoint['total_ptime']
     start_epoch = checkpoint['epoch']
@@ -199,37 +199,37 @@ else:
 print('training start!')
 # start_time = time.time()
 for epoch in range(start_epoch, train_epoch):
-    D_losses = []
+#     D_losses = []
     G_losses = []
     epoch_start_time = time.time()
     for x_, _ in train_loader:
         # train discriminator D
-        D.zero_grad()
+#         D.zero_grad()
 
-        mini_batch = x_.size()[0]
+#         mini_batch = x_.size()[0]
 
-        y_real_ = torch.ones(mini_batch)
-        y_fake_ = torch.zeros(mini_batch)
+#         y_real_ = torch.ones(mini_batch)
+#         y_fake_ = torch.zeros(mini_batch)
 
-        x_, y_real_, y_fake_ = Variable(x_.cuda()), Variable(y_real_.cuda()), Variable(y_fake_.cuda())
-        D_result = D(x_).squeeze()
-        D_real_loss = BCE_loss(D_result, y_real_)
+#         x_, y_real_, y_fake_ = Variable(x_.cuda()), Variable(y_real_.cuda()), Variable(y_fake_.cuda())
+#         D_result = D(x_).squeeze()
+#         D_real_loss = BCE_loss(D_result, y_real_)
 
-        z_ = torch.randn((mini_batch, 100)).view(-1, 100, 1, 1)
-        z_ = Variable(z_.cuda())
-        G_result = G(z_)
+#         z_ = torch.randn((mini_batch, 100)).view(-1, 100, 1, 1)
+#         z_ = Variable(z_.cuda())
+#         G_result = G(z_)
 
-        D_result = D(G_result).squeeze()
-        D_fake_loss = BCE_loss(D_result, y_fake_)
-        D_fake_score = D_result.data.mean()
+        # D_result = D(G_result).squeeze()
+        # D_fake_loss = BCE_loss(D_result, y_fake_)
+        # D_fake_score = D_result.data.mean()
 
-        D_train_loss = D_real_loss + D_fake_loss
+        # D_train_loss = D_real_loss + D_fake_loss
 
-        D_train_loss.backward()
-        D_optimizer.step()
+        # D_train_loss.backward()
+        # D_optimizer.step()
 
         # D_losses.append(D_train_loss.data[0])
-        D_losses.append(D_train_loss.data[0])
+        # D_losses.append(D_train_loss.data[0])
 
         # train generator G
         G.zero_grad()
@@ -238,8 +238,10 @@ for epoch in range(start_epoch, train_epoch):
         z_ = Variable(z_.cuda())
 
         G_result = G(z_)
-        D_result = D(G_result).squeeze()
-        G_train_loss = BCE_loss(D_result, y_real_)
+        small_G_result = small_G(z_)
+        # D_result = D(G_result).squeeze()
+        # G_train_loss = BCE_loss(D_result, y_real_)
+        G_train_loss = L1Loss(G_result, small_G_result)
         G_train_loss.backward()
         G_optimizer.step()
 
@@ -272,8 +274,8 @@ train_hist['total_ptime'].append(total_ptime)
 
 print("Avg per epoch ptime: %.2f, total %d epochs ptime: %.2f" % (torch.mean(torch.FloatTensor(train_hist['per_epoch_ptimes'])), train_epoch, total_ptime))
 print("Training finish!... save training results")
-torch.save(G.state_dict(), "MNIST_DCGAN_results/generator_param.pkl")
-torch.save(D.state_dict(), "MNIST_DCGAN_results/discriminator_param.pkl")
+torch.save(small_G.state_dict(), "MNIST_DCGAN_results/generator_param.pkl")
+# torch.save(D.state_dict(), "MNIST_DCGAN_results/discriminator_param.pkl")
 with open('MNIST_DCGAN_results/train_hist.pkl', 'wb') as f:
     pickle.dump(train_hist, f)
 
