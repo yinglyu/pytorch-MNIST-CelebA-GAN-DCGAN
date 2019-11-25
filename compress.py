@@ -76,17 +76,20 @@ def normal_init(m, mean, std):
 
 fixed_z_ = torch.randn((5 * 5, 100)).view(-1, 100, 1, 1)    # fixed noise
 fixed_z_ = Variable(fixed_z_.cuda(), volatile=True)
-def show_result(num_epoch, show = False, save = False, path = 'result.png', isFix=False):
+def show_result(num_epoch, show = False, save = False, path = 'result', isFix=False):
     z_ = torch.randn((5*5, 100)).view(-1, 100, 1, 1)
     z_ = Variable(z_.cuda(), volatile=True)
-
+    
     G.eval()
+    small_G.eval()
     if isFix:
         test_images = G(fixed_z_)
+        test_images_small = small_G(fixed_z_)
     else:
         test_images = G(z_)
+        test_images_small = small_G(z_)
     G.train()
-
+    small_G.train()
     size_figure_grid = 5
     fig, ax = plt.subplots(size_figure_grid, size_figure_grid, figsize=(5, 5))
     for i, j in itertools.product(range(size_figure_grid), range(size_figure_grid)):
@@ -101,21 +104,44 @@ def show_result(num_epoch, show = False, save = False, path = 'result.png', isFi
 
     label = 'Epoch {0}'.format(num_epoch)
     fig.text(0.5, 0.04, label, ha='center')
-    plt.savefig(path)
+    plt.savefig(path+"_big.png")
+
+    if show:
+        plt.show()
+    else:
+        plt.close()
+    fig, ax = plt.subplots(size_figure_grid, size_figure_grid, figsize=(5, 5))
+    for i, j in itertools.product(range(size_figure_grid), range(size_figure_grid)):
+        ax[i, j].get_xaxis().set_visible(False)
+        ax[i, j].get_yaxis().set_visible(False)
+
+    for k in range(5*5):
+        i = k // 5
+        j = k % 5
+        ax[i, j].cla()
+        ax[i, j].imshow(test_images_small[k, 0].cpu().data.numpy(), cmap='gray')
+
+    label = 'Epoch {0}'.format(num_epoch)
+    fig.text(0.5, 0.04, label, ha='center')
+    plt.savefig(path+"_small.png")
 
     if show:
         plt.show()
     else:
         plt.close()
 
-def show_train_hist(hist, show = False, save = False, path = 'Train_hist.png'):
-    x = range(len(hist['D_losses']))
 
-    y1 = hist['D_losses']
+
+
+def show_train_hist(hist, show = False, save = False, path = 'Train_hist.png'):
+    x = range(len(hist['G_losses']))
+
+
+ #   y1 = hist['D_losses']
     y2 = hist['G_losses']
 
     plt.plot(x, y1, label='D_loss')
-    plt.plot(x, y2, label='G_loss')
+ #   plt.plot(x, y2, label='G_loss')
 
     plt.xlabel('Iter')
     plt.ylabel('Loss')
@@ -149,7 +175,8 @@ train_loader = torch.utils.data.DataLoader(
 
 # network
 G = generator(128)
-small_G = generator(64)
+small_size = 32
+small_G = generator(small_size)
 # D = discriminator(128)
 G.weight_init(mean=0.0, std=0.02)
 small_G.weight_init(mean=0.0, std=0.02)
@@ -163,7 +190,7 @@ small_G.cuda()
 L1_loss = nn.L1Loss()
 
 # Adam optimizer
-G_optimizer = optim.Adam(samll_G.parameters(), lr=lr, betas=(0.5, 0.999))
+G_optimizer = optim.Adam(small_G.parameters(), lr=lr, betas=(0.5, 0.999))
 # D_optimizer = optim.Adam(D.parameters(), lr=lr, betas=(0.5, 0.999))
 
 # results save folder
@@ -173,10 +200,21 @@ if not os.path.isdir('MNIST_DCGAN_results/Random_results'):
     os.mkdir('MNIST_DCGAN_results/Random_results')
 if not os.path.isdir('MNIST_DCGAN_results/Fixed_results'):
     os.mkdir('MNIST_DCGAN_results/Fixed_results')
+if not os.path.isdir('MNIST_DCGAN_results/Compress/'):
+    os.mkdir('MNIST_DCGAN_results/Compress/')
+if not os.path.isdir('MNIST_DCGAN_results/Compress/'+ str(small_size)):
+    os.mkdir('MNIST_DCGAN_results/Compress/'+ str(small_size))
+if not os.path.isdir('MNIST_DCGAN_results/Compress/'+ str(small_size)+ '/Training'):
+    os.mkdir('MNIST_DCGAN_results/Compress/'+ str(small_size)+ '/Training')
+if not os.path.isdir('MNIST_DCGAN_results/Compress/'+ str(small_size)+ '/Validation'):
+    os.mkdir('MNIST_DCGAN_results/Compress/'+ str(small_size)+ '/Validation')
 
 if os.path.exists("MNIST_DCGAN_results/state.pkl"):
     checkpoint = torch.load("MNIST_DCGAN_results/state.pkl")
     G.load_state_dict(checkpoint['G'])
+if os.path.exists("MNIST_DCGAN_results/state_small_"+ str(small_size)+ ".pkl"):
+    checkpoint = torch.load("MNIST_DCGAN_results/state_small_"+ str(small_size)+ ".pkl")
+    small_G.load_state_dict(checkpoint['small_G'])
 #     D.load_state_dict(checkpoint['D'])
     G_optimizer.load_state_dict(checkpoint['G_optimizer'])
 #     D_optimizer.load_state_dict(checkpoint['D_optimizer'])
@@ -184,17 +222,17 @@ if os.path.exists("MNIST_DCGAN_results/state.pkl"):
     total_ptime =  checkpoint['total_ptime']
     start_epoch = checkpoint['epoch']
     print("start from epoch" + str(start_epoch))
-    num_iter = start_epoch
+    #num_iter = start_epoch
     
 else:
     start_epoch = 0
     total_ptime = 0
     train_hist = {}
-    train_hist['D_losses'] = []
+    #train_hist['D_losses'] = []
     train_hist['G_losses'] = []
     train_hist['per_epoch_ptimes'] = []
     train_hist['total_ptime'] = []
-    num_iter = start_epoch 
+    #num_iter = start_epoch 
 
 print('training start!')
 # start_time = time.time()
@@ -202,87 +240,82 @@ for epoch in range(start_epoch, train_epoch):
 #     D_losses = []
     G_losses = []
     epoch_start_time = time.time()
+    num_iter = 0
     for x_, _ in train_loader:
         # train discriminator D
-#         D.zero_grad()
-
-#         mini_batch = x_.size()[0]
-
+        # D.zero_grad()
+        mini_batch = x_.size()[0]
 #         y_real_ = torch.ones(mini_batch)
 #         y_fake_ = torch.zeros(mini_batch)
-
 #         x_, y_real_, y_fake_ = Variable(x_.cuda()), Variable(y_real_.cuda()), Variable(y_fake_.cuda())
 #         D_result = D(x_).squeeze()
 #         D_real_loss = BCE_loss(D_result, y_real_)
-
 #         z_ = torch.randn((mini_batch, 100)).view(-1, 100, 1, 1)
 #         z_ = Variable(z_.cuda())
 #         G_result = G(z_)
-
         # D_result = D(G_result).squeeze()
         # D_fake_loss = BCE_loss(D_result, y_fake_)
         # D_fake_score = D_result.data.mean()
-
         # D_train_loss = D_real_loss + D_fake_loss
-
         # D_train_loss.backward()
         # D_optimizer.step()
-
         # D_losses.append(D_train_loss.data[0])
         # D_losses.append(D_train_loss.data[0])
-
         # train generator G
         G.zero_grad()
-
         z_ = torch.randn((mini_batch, 100)).view(-1, 100, 1, 1)
         z_ = Variable(z_.cuda())
 
-        G_result = G(z_)
-        small_G_result = small_G(z_)
+        # G_result = G(z_).detach()
+        # small_G_result = small_G(z_)
         # D_result = D(G_result).squeeze()
         # G_train_loss = BCE_loss(D_result, y_real_)
-        G_train_loss = L1Loss(G_result, small_G_result)
+        # G_train_loss = L1_loss(G_result, small_G_result)
+        G_result = G(z_)
+        small_G_result = small_G(z_)
+        G_train_loss = L1_loss( small_G_result, G_result.detach())
         G_train_loss.backward()
         G_optimizer.step()
 
         G_losses.append(G_train_loss.data[0])
 
         num_iter += 1
-
+        if ((num_iter+1)%100 == 0):
+            p = 'MNIST_DCGAN_results/Compress/'+ str(small_size)+ '/Training/MNIST_DCGAN_epoch_' + str(epoch + 1) + '_iter_' + str(num_iter+1) 
+            show_result((epoch+1), save=True, path=p, isFix=False)
     epoch_end_time = time.time()
     per_epoch_ptime = epoch_end_time - epoch_start_time
     print(time.strftime("%Y-%m-%d %H:%M:%S",time.localtime()))
 
-    print('[%d/%d] - ptime: %.2f, loss_d: %.3f, loss_g: %.3f' % ((epoch + 1), train_epoch, per_epoch_ptime, torch.mean(torch.FloatTensor(D_losses)),
+    print('[%d/%d] - ptime: %.2f, loss_g: %.3f' % ((epoch + 1), train_epoch, per_epoch_ptime, 
                                                               torch.mean(torch.FloatTensor(G_losses))))
-    p = 'MNIST_DCGAN_results/Random_results/MNIST_DCGAN_' + str(epoch + 1) + '.png'
-    fixed_p = 'MNIST_DCGAN_results/Fixed_results/MNIST_DCGAN_' + str(epoch + 1) + '.png'
-    show_result((epoch+1), save=True, path=p, isFix=False)
+    #p = 'MNIST_DCGAN_results/Compress/Random_results/MNIST_DCGAN_' + str(epoch + 1) 
+    fixed_p = 'MNIST_DCGAN_results/Compress/'+ str(small_size)+ '/Validation/MNIST_DCGAN_' + str(epoch + 1) 
+    #show_result((epoch+1), save=True, path=p, isFix=False)
     show_result((epoch+1), save=True, path=fixed_p, isFix=True)
-    train_hist['D_losses'].append(torch.mean(torch.FloatTensor(D_losses)))
+    #train_hist['D_losses'].append(torch.mean(torch.FloatTensor(D_losses)))
     train_hist['G_losses'].append(torch.mean(torch.FloatTensor(G_losses)))
     train_hist['per_epoch_ptimes'].append(per_epoch_ptime)
     total_ptime += per_epoch_ptime
     if epoch % 2 == 0: 
-        state = {'G': G.state_dict(),'D': D.state_dict(), 'G_optimizer': G_optimizer.state_dict(),'D_optimizer': D_optimizer.state_dict(), 'train_hist' : train_hist, 'epoch': epoch+1, 'total_ptime' : total_ptime}
-        torch.save(state, "MNIST_DCGAN_results/state.pkl")
+        state = {'small_G': small_G.state_dict(), 'G_optimizer': G_optimizer.state_dict(),'train_hist' : train_hist, 'epoch': epoch+1, 'total_ptime' : total_ptime}
+        torch.save(state, "MNIST_DCGAN_results/state_small_"+ str(small_size)+ ".pkl")
     
-
 # end_time = time.time()
 # total_ptime = end_time - start_time
 train_hist['total_ptime'].append(total_ptime)
 
 print("Avg per epoch ptime: %.2f, total %d epochs ptime: %.2f" % (torch.mean(torch.FloatTensor(train_hist['per_epoch_ptimes'])), train_epoch, total_ptime))
 print("Training finish!... save training results")
-torch.save(small_G.state_dict(), "MNIST_DCGAN_results/generator_param.pkl")
+torch.save(small_G.state_dict(), "MNIST_DCGAN_results/Compress/"+ str(small_size)+ "/generator_param.pkl")
 # torch.save(D.state_dict(), "MNIST_DCGAN_results/discriminator_param.pkl")
 with open('MNIST_DCGAN_results/train_hist.pkl', 'wb') as f:
     pickle.dump(train_hist, f)
 
-show_train_hist(train_hist, save=True, path='MNIST_DCGAN_results/MNIST_DCGAN_train_hist.png')
+#show_train_hist(train_hist, save=True, path='MNIST_DCGAN_results/MNIST_DCGAN_train_hist.png')
 
 images = []
-for e in range(train_epoch):
-    img_name = 'MNIST_DCGAN_results/Fixed_results/MNIST_DCGAN_' + str(e + 1) + '.png'
-    images.append(imageio.imread(img_name))
-imageio.mimsave('MNIST_DCGAN_results/generation_animation.gif', images, fps=5)
+#for e in range(train_epoch):
+#    img_name = 'MNIST_DCGAN_results/Fixed_results/MNIST_DCGAN_' + str(e + 1) + '.png'
+#    images.append(imageio.imread(img_name))
+#imageio.misave('MNIST_DCGAN_results/generation_animation.gif', images, fps=5)
