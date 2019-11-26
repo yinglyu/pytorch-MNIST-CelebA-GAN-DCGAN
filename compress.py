@@ -165,9 +165,9 @@ def show_train_hist(hist, show = False, save = False, path = 'Train_hist.png'):
         plt.close()
 
 parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
-parser.add_argument('size', type=int, default=16,
-                    help=('Size of small generator'
-                          'to .npz statistic files'))   
+parser.add_argument('size', type=int, default=32,
+                    help=('Size of small generator')) 
+args = parser.parse_args()
 
 # training parameters
 batch_size = 128
@@ -191,7 +191,7 @@ train_loader = torch.utils.data.DataLoader(
 
 # network
 G = generator(128)
-small_size = 32
+small_size = args.size
 small_G = generator(small_size)
 # D = discriminator(128)
 G.weight_init(mean=0.0, std=0.02)
@@ -326,18 +326,22 @@ for epoch in range(start_epoch, train_epoch):
     test_images_small = small_G(z_)
     images_small_numpy = test_images_small.cpu().data.numpy()
     torch.cuda.empty_cache()
-    if not os.path.isdir('MNIST_DCGAN_results/RGB/small_G_'+ str(small_size)):
-        os.mkdir('MNIST_DCGAN_results/RGB/small_G_'+ str(small_size))
+    
+    p_small_G = "MNIST_DCGAN_results/RGB/small_G_" + str(small_size)
+    if not os.path.isdir(p_small_G):
+        os.mkdir(p_small_G)
+    p_mnist = "MNIST_DCGAN_results/RGB/mnist"
+    if os.path.exists(p_mnist+".npz"):
+        p_mnist = p_mnist+".npz"
+    #path = [p_mnist, p_small_G]
     for i in range(0,1000):
         src=skimage.transform.resize(images_small_numpy[i][0], (64, 64))
         imageio.imwrite("temp.jpg",skimage.img_as_ubyte(src))
         src = cv2.imread("temp.jpg", 0)
         src_RGB = cv2.cvtColor(src, cv2.COLOR_GRAY2RGB)
-        cv2.imwrite('MNIST_DCGAN_results/RGB/small_G_'+ str(small_size) + '/'+str(i)+".jpg", src_RGB)
+        cv2.imwrite(p_small_G + '/'+str(i)+".jpg", src_RGB)
     
-    p_small_G = "./MNIST_DCGAN_results/RGB/small_G_" + str(small_size)
-    path = [ p_small_G, "./MNIST_DCGAN_results/RGB/mnist" ]
-    fid = fid_score.calculate_fid_given_paths(path, 50, '',  2048)
+    fid = fid_score.calculate_fid_given_paths([p_mnist, p_small_G], 50, True,  2048)
     if fid < best_FID:
         best_FID = fid
         print("best_FID:" + str(fid))

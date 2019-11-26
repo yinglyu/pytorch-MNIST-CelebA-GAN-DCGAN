@@ -222,10 +222,14 @@ def _compute_statistics_of_path(path, model, batch_size, dims, cuda):
         #m, s = f[0][:], f[1][:]
         f.close()
     else:
+        file_path = path
         path = pathlib.Path(path)
         files = list(path.glob('*.jpg')) + list(path.glob('*.png'))
         m, s = calculate_activation_statistics(files, model, batch_size,
                                                dims, cuda)
+        np.savez_compressed(file_path + ".npz", mu=m, sigma=s)
+        
+        
 
 
     return m, s
