@@ -252,14 +252,13 @@ def calculate_fid_given_paths(paths, batch_size, cuda, dims):
     m2, s2 = _compute_statistics_of_path(paths[1], model, batch_size,
                                          dims, cuda)
     fid_value = calculate_frechet_distance(m1, s1, m2, s2)
-
+    
     return fid_value
 
 
 if __name__ == '__main__':
     args = parser.parse_args()
     os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
-
     fid_value = calculate_fid_given_paths(args.path,
                                           args.batch_size,
                                           args.gpu != '',
