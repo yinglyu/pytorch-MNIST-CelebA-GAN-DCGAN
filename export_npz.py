@@ -85,4 +85,4 @@ for i in range(0,1000):
     imageio.imwrite("temp.jpg",skimage.img_as_ubyte(src))
     src = cv2.imread("temp.jpg", 0)
     src_RGB = cv2.cvtColor(src, cv2.COLOR_GRAY2RGB)
-    cv2.imwrite(path_G +str(i)+".jpg", src_RGB)
+    cv2.imwrite(path_G +'/' +str(i)+".jpg", src_RGB)
