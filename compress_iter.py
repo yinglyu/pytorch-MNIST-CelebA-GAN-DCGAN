@@ -181,14 +181,14 @@ def compress(big_size, small_size):
     
     # data_loader
     img_size = 64
-    # transform = transforms.Compose([
-    #         transforms.Scale(img_size),
-    #         transforms.ToTensor(),
-    #         transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
-    # ])
-    
     transform = transforms.Compose([
-    transforms.ToTensor(), transforms.Normalize([0.5], [0.5])])
+            transforms.Scale(img_size),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
+    ])
+    
+#     transform = transforms.Compose([
+#     transforms.ToTensor(), transforms.Normalize([0.5], [0.5])])
     
     train_loader = torch.utils.data.DataLoader(
         datasets.MNIST('data', train=True, download=True, transform=transform),
