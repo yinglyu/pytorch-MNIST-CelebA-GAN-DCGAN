@@ -93,7 +93,7 @@ def normal_init(m, mean, std):
 fixed_z_ = torch.randn((5 * 5, 100)).view(-1, 100, 1, 1)    # fixed noise
 with torch.no_grad():
     fixed_z_ = Variable(fixed_z_.cuda())
-def show_result(num_epoch, show = False, save = False, path = 'result', isFix=False):
+def show_result(G, small_G, num_epoch, show = False, save = False, path = 'result', isFix=False):
     z_ = torch.randn((5*5, 100)).view(-1, 100, 1, 1)
     z_ = Variable(z_.cuda(), volatile=True)
     
@@ -195,8 +195,8 @@ def compress(big_size, small_size):
         batch_size=batch_size, shuffle=True)
     
     # network
-    global G
-    global small_G
+    # global G
+    # global small_G
     G = generator(big_size)
     small_G = generator(small_size)
     # D = discriminator(128)
@@ -292,7 +292,7 @@ def compress(big_size, small_size):
         
         fixed_p = 'MNIST_DCGAN_results/Compress/'+ str(big_size) + '_' + str(small_size)+ '/Validation/MNIST_DCGAN_' + str(epoch + 1) 
         #show_result((epoch+1), save=True, path=p, isFix=False)
-        show_result((epoch+1), save=True, path=fixed_p, isFix=True)
+        show_result(G, small_G, (epoch+1), save=True, path=fixed_p, isFix=True)
         #train_hist['D_losses'].append(torch.mean(torch.FloatTensor(D_losses)))
         train_hist['G_losses'].append(torch.mean(torch.FloatTensor(G_losses)))
         train_hist['per_epoch_ptimes'].append(per_epoch_ptime)
