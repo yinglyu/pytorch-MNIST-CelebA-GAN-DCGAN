@@ -93,85 +93,10 @@ def normal_init(m, mean, std):
 fixed_z_ = torch.randn((5 * 5, 100)).view(-1, 100, 1, 1)    # fixed noise
 with torch.no_grad():
     fixed_z_ = Variable(fixed_z_.cuda())
-def show_result(G, small_G, num_epoch, show = False, save = False, path = 'result', isFix=False):
-    z_ = torch.randn((5*5, 100)).view(-1, 100, 1, 1)
-    z_ = Variable(z_.cuda(), volatile=True)
-    
-    G.eval()
-    small_G.eval()
-    if isFix:
-        test_images = G(fixed_z_)
-        test_images_small = small_G(fixed_z_)
-    else:
-        test_images = G(z_)
-        test_images_small = small_G(z_)
-    G.train()
-    small_G.train()
-    size_figure_grid = 5
-    fig, ax = plt.subplots(size_figure_grid, size_figure_grid, figsize=(5, 5))
-    for i, j in itertools.product(range(size_figure_grid), range(size_figure_grid)):
-        ax[i, j].get_xaxis().set_visible(False)
-        ax[i, j].get_yaxis().set_visible(False)
-
-    for k in range(5*5):
-        i = k // 5
-        j = k % 5
-        ax[i, j].cla()
-        ax[i, j].imshow(test_images[k, 0].cpu().data.numpy(), cmap='gray')
-
-    label = 'Epoch {0}'.format(num_epoch)
-    fig.text(0.5, 0.04, label, ha='center')
-    plt.savefig(path+"_big.png")
-
-    if show:
-        plt.show()
-    else:
-        plt.close()
-    fig, ax = plt.subplots(size_figure_grid, size_figure_grid, figsize=(5, 5))
-    for i, j in itertools.product(range(size_figure_grid), range(size_figure_grid)):
-        ax[i, j].get_xaxis().set_visible(False)
-        ax[i, j].get_yaxis().set_visible(False)
-
-    for k in range(5*5):
-        i = k // 5
-        j = k % 5
-        ax[i, j].cla()
-        ax[i, j].imshow(test_images_small[k, 0].cpu().data.numpy(), cmap='gray')
-
-    label = 'Epoch {0}'.format(num_epoch)
-    fig.text(0.5, 0.04, label, ha='center')
-    plt.savefig(path+"_small.png")
-
-    if show:
-        plt.show()
-    else:
-        plt.close()
 
 
-def show_train_hist(hist, show = False, save = False, path = 'Train_hist.png'):
-    x = range(len(hist['G_losses']))
 
 
- #   y1 = hist['D_losses']
-    y2 = hist['G_losses']
-
-    plt.plot(x, y1, label='D_loss')
- #   plt.plot(x, y2, label='G_loss')
-
-    plt.xlabel('Iter')
-    plt.ylabel('Loss')
-
-    plt.legend(loc=4)
-    plt.grid(True)
-    plt.tight_layout()
-
-    if save:
-        plt.savefig(path)
-
-    if show:
-        plt.show()
-    else:
-        plt.close()
 
 def compress(big_size, small_size):
     # training parameters
@@ -182,23 +107,15 @@ def compress(big_size, small_size):
     # data_loader
     img_size = 64
     transform = transforms.Compose([
-        #transforms.Scale(img_size),
-        #transforms.Grayscale(img_size),
         transforms.Resize(img_size),
         transforms.ToTensor(),
-        #transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
         transforms.Normalize([0.5], [0.5])
     ])
-#     transform = transforms.Compose([
-#     transforms.ToTensor(), transforms.Normalize([0.5], [0.5])])
     
     train_loader = torch.utils.data.DataLoader(
         datasets.MNIST('data', train=True, download=True, transform=transform),
         batch_size=batch_size, shuffle=True)
-    
-    # network
-    # global G
-    # global small_G
+
     G = generator(big_size)
     small_G = generator(small_size)
     # D = discriminator(128)
@@ -235,7 +152,8 @@ def compress(big_size, small_size):
     if not os.path.isdir('MNIST_DCGAN_results/FID/'):
         os.mkdir('MNIST_DCGAN_results/FID/')
     
-    if os.path.exists("MNIST_DCGAN_results/iter/state_"+ str(big_size)+ ".pkl"):
+    if os.path.exists("MNIST_DCGAN_results/iter/best_state_"+ str(big_size)+ ".pkl"):
+        print("load")
         checkpoint = torch.load("MNIST_DCGAN_results/iter/best_state_"+ str(big_size)+ ".pkl")
         G.load_state_dict(checkpoint['G'])
     if os.path.exists("MNIST_DCGAN_results/iter/state_"+ str(small_size)+ ".pkl"):
@@ -305,7 +223,7 @@ def compress(big_size, small_size):
         for h in range(1):
 
             #export jpg
-            z_ = torch.randn((1000, 100)).view(-1, 100, 1, 1)
+            z_ = torch.randn((10000, 100)).view(-1, 100, 1, 1)
             with torch.no_grad():
                 z_ = Variable(z_.cuda())
             test_images_small = small_G(z_)
@@ -318,13 +236,13 @@ def compress(big_size, small_size):
             if os.path.exists(p_mnist+".npz"):
                 p_mnist = p_mnist+".npz"
             #path = [p_mnist, p_small_G]
-            for i in range(0,1000):
+            for i in range(0,10000):
                 
                 src=skimage.transform.resize(images_small_numpy[i][0], (64, 64))
                 imageio.imwrite("temp.jpg",skimage.img_as_ubyte(src))
                 src = cv2.imread("temp.jpg", 0)
                 src_RGB = cv2.cvtColor(src, cv2.COLOR_GRAY2RGB)
-                cv2.imwrite(p_small_G + '/'+str(h*1000 + i)+".jpg", src_RGB)
+                cv2.imwrite(p_small_G + '/'+str(h*1 + i)+".jpg", src_RGB)
         
         fid = fid_score.calculate_fid_given_paths([p_mnist, p_small_G], 50, True,  2048)
         #shutil.rmtree(p_small_G)
@@ -359,6 +277,85 @@ def compress(big_size, small_size):
     #    img_name = 'MNIST_DCGAN_results/Fixed_results/MNIST_DCGAN_' + str(e + 1) + '.png'
     #    images.append(imageio.imread(img_name))
     #imageio.misave('MNIST_DCGAN_results/generation_animation.gif', images, fps=5)
+
+def show_train_hist(hist, show = False, save = False, path = 'Train_hist.png'):
+    x = range(len(hist['G_losses']))
+
+
+ #   y1 = hist['D_losses']
+    y2 = hist['G_losses']
+
+    plt.plot(x, y1, label='D_loss')
+ #   plt.plot(x, y2, label='G_loss')
+
+    plt.xlabel('Iter')
+    plt.ylabel('Loss')
+
+    plt.legend(loc=4)
+    plt.grid(True)
+    plt.tight_layout()
+
+    if save:
+        plt.savefig(path)
+
+    if show:
+        plt.show()
+    else:
+        plt.close()
+
+def show_result(G, small_G, num_epoch, show = False, save = False, path = 'result', isFix=False):
+    z_ = torch.randn((5*5, 100)).view(-1, 100, 1, 1)
+    z_ = Variable(z_.cuda(), volatile=True)
+    
+    G.eval()
+    small_G.eval()
+    if isFix:
+        test_images = G(fixed_z_)
+        test_images_small = small_G(fixed_z_)
+    else:
+        test_images = G(z_)
+        test_images_small = small_G(z_)
+    G.train()
+    small_G.train()
+    size_figure_grid = 5
+    fig, ax = plt.subplots(size_figure_grid, size_figure_grid, figsize=(5, 5))
+    for i, j in itertools.product(range(size_figure_grid), range(size_figure_grid)):
+        ax[i, j].get_xaxis().set_visible(False)
+        ax[i, j].get_yaxis().set_visible(False)
+
+    for k in range(5*5):
+        i = k // 5
+        j = k % 5
+        ax[i, j].cla()
+        ax[i, j].imshow(test_images[k, 0].cpu().data.numpy(), cmap='gray')
+
+    label = 'Epoch {0}'.format(num_epoch)
+    fig.text(0.5, 0.04, label, ha='center')
+    plt.savefig(path+"_big.png")
+
+    if show:
+        plt.show()
+    else:
+        plt.close()
+    fig, ax = plt.subplots(size_figure_grid, size_figure_grid, figsize=(5, 5))
+    for i, j in itertools.product(range(size_figure_grid), range(size_figure_grid)):
+        ax[i, j].get_xaxis().set_visible(False)
+        ax[i, j].get_yaxis().set_visible(False)
+
+    for k in range(5*5):
+        i = k // 5
+        j = k % 5
+        ax[i, j].cla()
+        ax[i, j].imshow(test_images_small[k, 0].cpu().data.numpy(), cmap='gray')
+
+    label = 'Epoch {0}'.format(num_epoch)
+    fig.text(0.5, 0.04, label, ha='center')
+    plt.savefig(path+"_small.png")
+
+    if show:
+        plt.show()
+    else:
+        plt.close()
 
 if __name__ == '__main__':
     args = parser.parse_args()
