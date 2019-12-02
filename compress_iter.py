@@ -19,6 +19,7 @@ import shutil
 warnings.filterwarnings("ignore")
 
 
+
 parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
 parser.add_argument('--small_size', type=int, default=32,
                     help=('Size of small generator')) 
@@ -316,6 +317,7 @@ def compress(big_size, small_size):
                 p_mnist = p_mnist+".npz"
             #path = [p_mnist, p_small_G]
             for i in range(0,100):
+                
                 src=skimage.transform.resize(images_small_numpy[i][0], (64, 64))
                 imageio.imwrite("temp.jpg",skimage.img_as_ubyte(src))
                 src = cv2.imread("temp.jpg", 0)
@@ -323,7 +325,7 @@ def compress(big_size, small_size):
                 cv2.imwrite(p_small_G + '/'+str(h*100 + i)+".jpg", src_RGB)
         
         fid = fid_score.calculate_fid_given_paths([p_mnist, p_small_G], 50, True,  2048)
-        shutil.rmtree(p_small_G)
+        #shutil.rmtree(p_small_G)
         if fid < best_FID:
             best_FID = fid
             print("FID update:" + str(fid))
