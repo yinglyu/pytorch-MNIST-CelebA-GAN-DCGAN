@@ -182,11 +182,13 @@ def compress(big_size, small_size):
     # data_loader
     img_size = 64
     transform = transforms.Compose([
-            transforms.Scale(img_size),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
+        #transforms.Scale(img_size),
+        #transforms.Grayscale(img_size),
+        transforms.Resize(img_size),
+        transforms.ToTensor(),
+        #transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
+        transforms.Normalize([0.5], [0.5])
     ])
-    
 #     transform = transforms.Compose([
 #     transforms.ToTensor(), transforms.Normalize([0.5], [0.5])])
     
@@ -300,10 +302,10 @@ def compress(big_size, small_size):
         torch.cuda.empty_cache()
         
         
-        for h in range(10):
+        for h in range(1):
 
             #export jpg
-            z_ = torch.randn((100, 100)).view(-1, 100, 1, 1)
+            z_ = torch.randn((1000, 100)).view(-1, 100, 1, 1)
             with torch.no_grad():
                 z_ = Variable(z_.cuda())
             test_images_small = small_G(z_)
@@ -316,13 +318,13 @@ def compress(big_size, small_size):
             if os.path.exists(p_mnist+".npz"):
                 p_mnist = p_mnist+".npz"
             #path = [p_mnist, p_small_G]
-            for i in range(0,100):
+            for i in range(0,1000):
                 
                 src=skimage.transform.resize(images_small_numpy[i][0], (64, 64))
                 imageio.imwrite("temp.jpg",skimage.img_as_ubyte(src))
                 src = cv2.imread("temp.jpg", 0)
                 src_RGB = cv2.cvtColor(src, cv2.COLOR_GRAY2RGB)
-                cv2.imwrite(p_small_G + '/'+str(h*100 + i)+".jpg", src_RGB)
+                cv2.imwrite(p_small_G + '/'+str(h*1000 + i)+".jpg", src_RGB)
         
         fid = fid_score.calculate_fid_given_paths([p_mnist, p_small_G], 50, True,  2048)
         #shutil.rmtree(p_small_G)
