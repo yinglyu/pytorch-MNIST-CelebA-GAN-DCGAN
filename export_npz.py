@@ -1,8 +1,4 @@
 
-# coding: utf-8
-
-# In[1]:
-
 
 import os, time
 import matplotlib.pyplot as plt
@@ -17,6 +13,7 @@ import torch.optim as optim
 from torch.autograd import Variable
 import torchvision.datasets.mnist as mnist
 import numpy 
+import skimage
 from skimage import transform,data
 from scipy import misc
 
@@ -61,91 +58,31 @@ def normal_init(m, mean, std):
         m.bias.data.zero_()
 
 
-# In[3]:
-
-
-
-if not os.path.isdir('MNIST_DCGAN_results'):
-    os.mkdir('MNIST_DCGAN_results')
-if not os.path.isdir('MNIST_DCGAN_results/mnist'):
-    os.mkdir('MNIST_DCGAN_results/mnist')
-test_torch = mnist.read_image_file(os.path.join('data/raw/','t10k-images-idx3-ubyte'))
-# test_torch.size()
-tor2numpy=test_torch.numpy()
-# tor2numpy.shape
-# %matplotlib inline
-# plt.figure(figsize=(64,64),dpi=1)
-# plt.imshow(tor2numpy[0], cmap='gray')
-
-for i in range(0,1000):
-    dst=transform.resize(tor2numpy[i], (64, 64))
-    misc.imsave('MNIST_DCGAN_results/mnist/'+str(i)+".jpg",dst)
-
-
-
-# In[4]:
-
-
-
-
 # network
-G = generator(128)
-small_size = 2
-small_G = generator(small_size)
-# G.weight_init(mean=0.0, std=0.02)
-# small_G.weight_init(mean=0.0, std=0.02)
+size = 128
+G = generator(size)
 G.cuda()
-small_G.cuda()
 
 
-# In[5]:
-
-
-if os.path.exists("MNIST_DCGAN_results/state.pkl"):
-    checkpoint = torch.load("MNIST_DCGAN_results/state.pkl")
+if os.path.exists("MNIST_DCGAN_results/iter/best_state_"+ str(size) +".pkl"):
+    checkpoint = torch.load("MNIST_DCGAN_results/iter/best_state_"+ str(size) +".pkl")
     G.load_state_dict(checkpoint['G'])
-if os.path.exists("MNIST_DCGAN_results/state_small_"+ str(small_size)+ ".pkl"):
-    checkpoint = torch.load("MNIST_DCGAN_results/state_small_"+ str(small_size)+ ".pkl")
-    small_G.load_state_dict(checkpoint['small_G'])
-
-
-# In[13]:
 
 
 z_ = torch.randn((1000, 100)).view(-1, 100, 1, 1)
 z_ = Variable(z_.cuda(), volatile=True)
 G.eval()
-small_G.eval()
 test_images = G(z_)
-test_images_small = small_G(z_)
-
-
-# In[14]:
-
-
 
 images_numpy = test_images.cpu().data.numpy()
-# images_numpy.shape
 
-
-# In[15]:
-
-
-images_small_numpy = test_images_small.cpu().data.numpy()
-# images_small_numpy.shape
-
-
-# In[16]:
-
-
-if not os.path.isdir('MNIST_DCGAN_results/G'):
-    os.mkdir('MNIST_DCGAN_results/G')
-if not os.path.isdir('MNIST_DCGAN_results/small_G_'+ str(small_size)):
-    os.mkdir('MNIST_DCGAN_results/small_G_'+ str(small_size))
+path_G = 'MNIST_DCGAN_results/RGB/G_'+ str(size)
+if not os.path.isdir(path_G):
+    os.mkdir(path_G)
 
 for i in range(0,1000):
-    dst=transform.resize(images_numpy[i][0], (64, 64))
-    dst_small = transform.resize(images_small_numpy[i][0], (64, 64))
-    misc.imsave('MNIST_DCGAN_results/G/'+str(i)+".jpg",dst)
-    misc.imsave('MNIST_DCGAN_results/small_G_'+ str(small_size)+'/'+str(i)+".jpg",dst_small)
-
+    src=skimage.transform.resize(images_numpy[i][0], (64, 64))
+    imageio.imwrite("temp.jpg",skimage.img_as_ubyte(src))
+    src = cv2.imread("temp.jpg", 0)
+    src_RGB = cv2.cvtColor(src, cv2.COLOR_GRAY2RGB)
+    cv2.imwrite(path_G +str(i)+".jpg", src_RGB)
