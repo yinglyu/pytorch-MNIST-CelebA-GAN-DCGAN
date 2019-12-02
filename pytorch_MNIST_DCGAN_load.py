@@ -172,7 +172,8 @@ if not os.path.isdir('MNIST_DCGAN_results/Random_results'):
     os.mkdir('MNIST_DCGAN_results/Random_results')
 if not os.path.isdir('MNIST_DCGAN_results/Fixed_results'):
     os.mkdir('MNIST_DCGAN_results/Fixed_results')
-
+if not os.path.isdir('MNIST_DCGAN_results/iter'):
+    os.mkdir('MNIST_DCGAN_results/iter')
 if os.path.exists("MNIST_DCGAN_results/state.pkl"):
     checkpoint = torch.load("MNIST_DCGAN_results/state.pkl")
     G.load_state_dict(checkpoint['G'])
@@ -272,6 +273,11 @@ train_hist['total_ptime'].append(total_ptime)
 
 print("Avg per epoch ptime: %.2f, total %d epochs ptime: %.2f" % (torch.mean(torch.FloatTensor(train_hist['per_epoch_ptimes'])), train_epoch, total_ptime))
 print("Training finish!... save training results")
+
+
+
+state = {'G': G.state_dict(),'D': D.state_dict(), 'G_optimizer': G_optimizer.state_dict(),'D_optimizer': D_optimizer.state_dict(), 'train_hist' : train_hist, 'epoch': epoch+1, 'total_ptime' : total_ptime}
+torch.save(state, "MNIST_DCGAN_results/iter/best_state_128.pkl")
 torch.save(G.state_dict(), "MNIST_DCGAN_results/generator_param.pkl")
 torch.save(D.state_dict(), "MNIST_DCGAN_results/discriminator_param.pkl")
 with open('MNIST_DCGAN_results/train_hist.pkl', 'wb') as f:
