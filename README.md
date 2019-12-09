@@ -27,6 +27,11 @@ Pytorch implementation of Iterative Knowledge Distillation for Improved Generati
   * 95-64
 ![Loss](MNIST_DCGAN_results/95_64.png)
 
+* FLOP
+  * 128-64 - 1.646G
+  * 128-95 - 913.792M
+  * 95-64 - 420.573M
+
 
 ## Development Environment
 
